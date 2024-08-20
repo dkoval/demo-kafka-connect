@@ -1,0 +1,63 @@
+# Explore subjects
+GET http://{{schema_registry_host}}:{{schema_registry_port}}/subjects
+Accept: application/json
+
+###
+# Explore schemas
+GET http://{{schema_registry_host}}:{{schema_registry_port}}/schemas
+Accept: application/json
+
+# HOWTO manually register a schema at a specified ID on a Schema Registry
+# https://docs.confluent.io/platform/current/schema-registry/installation/migrate.html
+
+###
+@input_topic = user.assigned
+@subject_name = {{input_topic}}-value
+@schema_id = 1984563833
+@schema_version = 1
+
+# Put the subject into IMPORT mode (the subject must be empty or non-existent)
+PUT http://{{schema_registry_host}}:{{schema_registry_port}}/mode/{{subject_name}}
+Content-Type: application/json
+
+{
+  "mode": "IMPORT"
+}
+
+###
+# Ensure the subject mode got changed to IMPORT
+GET http://{{schema_registry_host}}:{{schema_registry_port}}/mode/{{subject_name}}
+Accept: application/json
+
+###
+# Register the schema
+POST http://{{schema_registry_host}}:{{schema_registry_port}}/subjects/{{subject_name}}/versions
+Content-Type: application/json
+
+{
+  "schemaType": "AVRO",
+  "version": {{schema_version}},
+  "id": {{schema_id}},
+  "schema": "{\"name\":\"UserCreated\",\"namespace\":\"user\",\"type\":\"record\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"logicalType\":\"uuid\"}},{\"name\":\"name\",\"type\":{\"type\":\"string\"}}]}"
+}
+
+###
+# Return the subject to READWRITE mode (optional)
+PUT http://{{schema_registry_host}}:{{schema_registry_port}}/mode/{{subject_name}}
+Content-Type: application/json
+
+{
+  "mode": "READWRITE"
+}
+
+###
+GET http://{{schema_registry_host}}:{{schema_registry_port}}/subjects/{{subject_name}}/versions
+Accept: application/json
+
+###
+GET http://{{schema_registry_host}}:{{schema_registry_port}}/subjects/{{subject_name}}/versions/{{schema_version}}/schema
+Accept: application/json
+
+###
+GET http://{{schema_registry_host}}:{{schema_registry_port}}/schemas/ids/{{schema_id}}/versions
+Accept: application/json

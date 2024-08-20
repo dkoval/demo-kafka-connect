@@ -1,0 +1,23 @@
+@input_topic = "user.assigned"
+@s3_region = "eu-west-1"
+@s3_bucket_name = "dk-demo-kafka-connect"
+
+PUT http://{{kafka_connect_host}}:{{kafka_connect_port}}/connectors/sink-s3/config
+Content-Type: application/json
+Accept: application/json
+
+{
+  "connector.class": "io.confluent.connect.s3.S3SinkConnector",
+  "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+  "value.converter": "io.confluent.connect.avro.AvroConverter",
+  "value.converter.schema.registry.url": "http://schema-registry:8081",
+  "tasks.max": "2",
+  "topics": {{input_topic}},
+  "s3.region": {{s3_region}},
+  "s3.bucket.name": {{s3_bucket_name}},
+  "flush.size": "5",
+  "storage.class": "io.confluent.connect.s3.storage.S3Storage",
+  "format.class": "io.confluent.connect.s3.format.avro.AvroFormat",
+  "schema.generator.class": "io.confluent.connect.storage.hive.schema.DefaultSchemaGenerator",
+  "partitioner.class": "io.confluent.connect.storage.partitioner.DefaultPartitioner"
+}
