@@ -10,6 +10,7 @@ Accept: application/json
   "connector.class": "io.confluent.connect.s3.S3SinkConnector",
   "key.converter": "org.apache.kafka.connect.storage.StringConverter",
   "value.converter": "io.confluent.connect.avro.AvroConverter",
+  "value.converter.value.subject.name.strategy": "io.confluent.kafka.serializers.subject.RecordNameStrategy",
   "value.converter.schema.registry.url": "http://schema-registry:8081",
   "tasks.max": "2",
   "topics": {{input_topic}},

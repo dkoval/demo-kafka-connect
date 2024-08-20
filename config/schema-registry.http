@@ -11,8 +11,8 @@ Accept: application/json
 # https://docs.confluent.io/platform/current/schema-registry/installation/migrate.html
 
 ###
-@input_topic = user.assigned
-@subject_name = {{input_topic}}-value
+# subject = <schema.namespace>.<schema.name>
+@subject_name = user.UserCreated
 @schema_id = 1984563833
 @schema_version = 1
 
