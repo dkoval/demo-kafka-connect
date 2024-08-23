@@ -1,5 +1,6 @@
 package com.github.dkoval.hackeda
 
+import com.github.dkoval.hackeda.producer.SimpleKafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 
 private const val BOOTSTRAP_SERVERS = "localhost:9092"

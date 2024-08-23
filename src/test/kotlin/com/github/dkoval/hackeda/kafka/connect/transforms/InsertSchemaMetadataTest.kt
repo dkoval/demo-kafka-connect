@@ -1,0 +1,118 @@
+package com.github.dkoval.hackeda.kafka.connect.transforms
+
+import com.github.dkoval.hackeda.kafka.connect.transforms.InsertSchemaMetadata.Companion.SCHEMA_FIELD_DEFAULT
+import com.github.dkoval.hackeda.kafka.connect.transforms.InsertSchemaMetadata.Companion.SCHEMA_FIELD_PROP
+import com.github.dkoval.hackeda.kafka.connect.transforms.InsertSchemaMetadata.Companion.SCHEMA_INFO_SCHEMA
+import org.apache.kafka.connect.data.Schema
+import org.apache.kafka.connect.data.SchemaBuilder
+import org.apache.kafka.connect.data.Struct
+import org.apache.kafka.connect.sink.SinkRecord
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.ArgumentsProvider
+import org.junit.jupiter.params.provider.ArgumentsSource
+import java.util.stream.Stream
+
+internal class InsertSchemaMetadataTest {
+
+    class TransformProps : ArgumentsProvider {
+        override fun provideArguments(context: ExtensionContext): Stream<out Arguments> = Stream.of(
+            Arguments.of(
+                mapOf<String, Any>(
+                    SCHEMA_FIELD_PROP to "__schema_info__",
+                )
+            ),
+            Arguments.of(
+                emptyMap<String, Any>()
+            )
+        )
+    }
+
+    private val transform = InsertSchemaMetadata.Value<SinkRecord>()
+
+    @AfterEach
+    fun tearDown() {
+        transform.close()
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(TransformProps::class)
+    fun `should copy schema and and insert schema metadata fields`(props: Map<String, *>) {
+        // schema field to be inserted
+        val schemaField = (props[SCHEMA_FIELD_PROP] ?: SCHEMA_FIELD_DEFAULT) as String
+        transform.configure(props)
+
+        // original schema
+        val originalSchema = SchemaBuilder.struct()
+            .name("user.UserAssigned")
+            .version(1)
+            .doc("README")
+            .field("id", Schema.STRING_SCHEMA)
+            .field("name", Schema.STRING_SCHEMA)
+            .build()
+
+        // original value
+        val originalValue = Struct(originalSchema)
+            .put("id", "8c4e627d-61ef-4a21-8631-331a0d5b1422")
+            .put("name", "John Doe")
+
+        // apply SMT
+        val transformedRecord = transform.apply(
+            SinkRecord("test-topic", 0, null, "key1", originalSchema, originalValue, 0)
+        )
+
+        val transformedSchema = transformedRecord.valueSchema()
+        val transformedValue = transformedRecord.value() as Struct
+
+        // ensure original and transformed records share the same schema
+        assertEquals(originalSchema.name(), transformedSchema.name())
+        assertEquals(originalSchema.version(), transformedSchema.version())
+        assertEquals(originalSchema.doc(), transformedSchema.doc())
+
+        // assert that the transformed record contains original fields
+        assertEquals(Schema.STRING_SCHEMA, transformedSchema.field("id").schema())
+        assertEquals(originalValue.getString("id"), transformedValue.getString("id"))
+
+        assertTransformedField(
+            "id",
+            originalSchema,
+            originalValue,
+            transformedSchema,
+            transformedValue,
+            Struct::getString
+        )
+
+        assertTransformedField(
+            "name",
+            originalSchema,
+            originalValue,
+            transformedSchema,
+            transformedValue,
+            Struct::getString
+        )
+
+        // assert that the transformed record contains additional schema metadata
+        assertEquals(SCHEMA_INFO_SCHEMA, transformedSchema.field(schemaField).schema())
+        assertEquals(
+            Struct(SCHEMA_INFO_SCHEMA)
+                .put("name", originalSchema.name())
+                .put("version", originalSchema.version()),
+            transformedValue.getStruct(schemaField)
+        )
+    }
+}
+
+private fun assertTransformedField(
+    fieldName: String,
+    originalSchema: Schema,
+    originalValue: Struct,
+    transformedSchema: Schema,
+    transformedValue: Struct,
+    fieldExtractor: (value: Struct, fieldName: String) -> Any
+) {
+    assertEquals(originalSchema.field(fieldName).schema(), transformedSchema.field(fieldName).schema())
+    assertEquals(fieldExtractor(originalValue, fieldName), fieldExtractor(transformedValue, fieldName))
+}

@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "2.0.0"
+    kotlin("jvm") version "2.0.20"
 }
 
 group = "com.github.dkoval"
@@ -10,8 +10,9 @@ repositories {
 }
 
 dependencies {
-    // Kafka + AVRO
+    // Kafka + Kafka Connect
     implementation("org.apache.kafka:kafka-clients:3.8.0")
+    compileOnly("org.apache.kafka:connect-transforms:3.8.0")
 
     // Logging
     implementation("org.slf4j:slf4j-api:2.0.13")
@@ -24,6 +25,12 @@ dependencies {
 
 kotlin {
     jvmToolchain(17)
+}
+
+configurations {
+    configurations.testImplementation.get().apply {
+        extendsFrom(configurations.compileOnly.get())
+    }
 }
 
 tasks {

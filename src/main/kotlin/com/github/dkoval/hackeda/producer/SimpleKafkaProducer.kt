@@ -1,4 +1,4 @@
-package com.github.dkoval.hackeda
+package com.github.dkoval.hackeda.producer
 
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
