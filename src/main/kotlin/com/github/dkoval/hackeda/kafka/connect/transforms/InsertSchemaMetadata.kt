@@ -4,21 +4,22 @@ import org.apache.kafka.common.cache.Cache
 import org.apache.kafka.common.cache.LRUCache
 import org.apache.kafka.common.cache.SynchronizedCache
 import org.apache.kafka.common.config.ConfigDef
-import org.apache.kafka.connect.connector.ConnectRecord
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
+import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.transforms.Transformation
 import org.apache.kafka.connect.transforms.util.Requirements.requireStruct
 import org.apache.kafka.connect.transforms.util.SchemaUtil
 import org.apache.kafka.connect.transforms.util.SimpleConfig
+import org.slf4j.LoggerFactory
 
 /**
  * Inserts schema metadata, including `name` and `version` fields, into a `ConnectRecord`.
  *
  * The implementation is inspired by `org.apache.kafka.connect.transforms.InsertField` Kafka Connect SMT.
  */
-abstract class InsertSchemaMetadata<R : ConnectRecord<R>> : Transformation<R> {
+abstract class InsertSchemaMetadata : Transformation<SinkRecord> {
 
     companion object {
         const val SCHEMA_FIELD_PROP = "schema.field"
@@ -39,6 +40,7 @@ abstract class InsertSchemaMetadata<R : ConnectRecord<R>> : Transformation<R> {
             )
     }
 
+    private val logger = LoggerFactory.getLogger(javaClass)
     private var schemaField: String? = null
     private var schemaUpdateCache: Cache<Schema, Schema>? = null
 
@@ -48,16 +50,25 @@ abstract class InsertSchemaMetadata<R : ConnectRecord<R>> : Transformation<R> {
         schemaUpdateCache = SynchronizedCache(LRUCache(16))
     }
 
-    override fun apply(record: R): R =
+    override fun apply(record: SinkRecord): SinkRecord =
         if (shouldInsertSchemaMetadata(record)) applyWithSchema(record) else record
 
-    private fun shouldInsertSchemaMetadata(record: R): Boolean {
+    private fun shouldInsertSchemaMetadata(record: SinkRecord): Boolean {
         operatingValue(record) ?: return false
-        operatingSchema(record)?.name() ?: return false
-        return true
+        val schema = operatingSchema(record) ?: return false
+        return (schema.name() != null).also { ok ->
+            if (!ok) {
+                logger.warn(
+                    "Record with key = {}, partition = {}, offset = {} has unnamed schema. Schema metadata won't be inserted.",
+                    record.key(),
+                    record.kafkaPartition(),
+                    record.kafkaOffset()
+                )
+            }
+        }
     }
 
-    private fun applyWithSchema(record: R): R {
+    private fun applyWithSchema(record: SinkRecord): SinkRecord {
         val originalValue = requireStruct(operatingValue(record), "schema fields insertion")
         val originalSchema = originalValue.schema()
 
@@ -102,17 +113,17 @@ abstract class InsertSchemaMetadata<R : ConnectRecord<R>> : Transformation<R> {
         schemaUpdateCache = null
     }
 
-    protected abstract fun operatingValue(record: R): Any?
-    protected abstract fun operatingSchema(record: R): Schema?
-    protected abstract fun newRecord(record: R, updatedSchema: Schema, updatedValue: Any): R
+    protected abstract fun operatingValue(record: SinkRecord): Any?
+    protected abstract fun operatingSchema(record: SinkRecord): Schema?
+    protected abstract fun newRecord(record: SinkRecord, updatedSchema: Schema, updatedValue: Any): SinkRecord
 
-    class Value<R : ConnectRecord<R>> : InsertSchemaMetadata<R>() {
+    class Value : InsertSchemaMetadata() {
 
-        override fun operatingValue(record: R): Any? = record.value()
+        override fun operatingValue(record: SinkRecord): Any? = record.value()
 
-        override fun operatingSchema(record: R): Schema? = record.valueSchema()
+        override fun operatingSchema(record: SinkRecord): Schema? = record.valueSchema()
 
-        override fun newRecord(record: R, updatedSchema: Schema, updatedValue: Any): R =
+        override fun newRecord(record: SinkRecord, updatedSchema: Schema, updatedValue: Any): SinkRecord =
             record.newRecord(
                 record.topic(),
                 record.kafkaPartition(),

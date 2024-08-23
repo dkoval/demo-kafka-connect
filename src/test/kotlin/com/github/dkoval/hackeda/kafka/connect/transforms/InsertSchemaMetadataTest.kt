@@ -31,7 +31,7 @@ internal class InsertSchemaMetadataTest {
         )
     }
 
-    private val transform = InsertSchemaMetadata.Value<SinkRecord>()
+    private val transform = InsertSchemaMetadata.Value()
 
     @AfterEach
     fun tearDown() {
