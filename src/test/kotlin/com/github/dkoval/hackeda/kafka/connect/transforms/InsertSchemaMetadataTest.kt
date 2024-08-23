@@ -8,9 +8,7 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.sink.SinkRecord
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -63,7 +61,12 @@ internal class InsertSchemaMetadataTest {
 
         // apply SMT
         val transformedRecord = transform.apply(
-            SinkRecord("test-topic", 0, null, "key1", originalSchema, originalValue, 0)
+            SinkRecord(
+                "test-topic", 0,
+                null, "key1",
+                originalSchema, originalValue,
+                0
+            )
         )
 
         val transformedSchema = transformedRecord.valueSchema()
@@ -75,9 +78,6 @@ internal class InsertSchemaMetadataTest {
         assertEquals(originalSchema.doc(), transformedSchema.doc())
 
         // assert that the transformed record contains original fields
-        assertEquals(Schema.STRING_SCHEMA, transformedSchema.field("id").schema())
-        assertEquals(originalValue.getString("id"), transformedValue.getString("id"))
-
         assertTransformedField(
             "id",
             originalSchema,
@@ -106,9 +106,10 @@ internal class InsertSchemaMetadataTest {
         )
     }
 
-    @Test
-    fun `should cache original schema`() {
-        transform.configure(emptyMap<String, Any>())
+    @ParameterizedTest
+    @ArgumentsSource(TransformProps::class)
+    fun `should cache original schema`(props: Map<String, *>) {
+        transform.configure(props)
 
         // original schema
         val originalSchema = SchemaBuilder.struct()
@@ -123,8 +124,8 @@ internal class InsertSchemaMetadataTest {
         // apply SMT
         val transformedRecord1 = transform.apply(
             SinkRecord(
-                "test-topic", 0, null, "key1", originalSchema,
-                Struct(originalSchema)
+                "test-topic", 0, null, "key1",
+                originalSchema, Struct(originalSchema)
                     .put("id", "ID1")
                     .put("name", "John Doe"),
                 0
@@ -133,8 +134,9 @@ internal class InsertSchemaMetadataTest {
 
         val transformedRecord2 = transform.apply(
             SinkRecord(
-                "test-topic", 0, null, "key2", originalSchema,
-                Struct(originalSchema)
+                "test-topic", 0,
+                null, "key2",
+                originalSchema, Struct(originalSchema)
                     .put("id", "ID2")
                     .put("name", "Jane Doe"),
                 1
@@ -142,6 +144,56 @@ internal class InsertSchemaMetadataTest {
         )
 
         assertSame(transformedRecord1.valueSchema(), transformedRecord2.valueSchema())
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(TransformProps::class)
+    fun `should not transform schemaless records`(props: Map<String, *>) {
+        transform.configure(props)
+
+        // sink record is schemaless
+        val originalRecord = SinkRecord(
+            "test-topic", 0,
+            null, "key1",
+            null, mapOf(
+                "id" to "ID1",
+                "name" to "John Doe"
+            ),
+            0
+        )
+
+        // apply SMT
+        val transformedRecord = transform.apply(originalRecord)
+
+        assertSame(originalRecord, transformedRecord)
+        assertNull(transformedRecord.valueSchema())
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(TransformProps::class)
+    fun `should not transform records with unnamed schema`(props: Map<String, *>) {
+        transform.configure(props)
+
+        // original unnamed schema
+        val originalSchema = SchemaBuilder.struct()
+            .version(42)
+            .doc("README")
+            .field("id", Schema.STRING_SCHEMA)
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+            .build()
+
+        // apply SMT
+        val originalRecord = SinkRecord(
+            "test-topic", 0, null, "key1",
+            originalSchema, Struct(originalSchema)
+                .put("id", "ID1")
+                .put("name", "John Doe"),
+            0
+        )
+
+        val transformedRecord = transform.apply(originalRecord)
+
+        assertSame(originalRecord, transformedRecord)
     }
 }
 
@@ -151,7 +203,7 @@ private fun assertTransformedField(
     originalValue: Struct,
     transformedSchema: Schema,
     transformedValue: Struct,
-    fieldExtractor: (value: Struct, fieldName: String) -> Any
+    fieldExtractor: Struct.(fieldName: String) -> Any
 ) {
     assertEquals(originalSchema.field(fieldName).schema(), transformedSchema.field(fieldName).schema())
     assertEquals(fieldExtractor(originalValue, fieldName), fieldExtractor(transformedValue, fieldName))
