@@ -33,7 +33,7 @@ abstract class InsertSchemaMetadata : Transformation<SinkRecord> {
             .field("version", Schema.OPTIONAL_INT32_SCHEMA)
             .build()
 
-        private val CONFIG_DEF: ConfigDef = ConfigDef()
+        val CONFIG_DEF: ConfigDef = ConfigDef()
             .define(
                 SCHEMA_FIELD_PROP,
                 ConfigDef.Type.STRING,
