@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.utils.extendsFrom
+
 plugins {
     kotlin("jvm") version "2.0.20"
 }
@@ -11,7 +13,6 @@ repositories {
 
 dependencies {
     // Kafka + Kafka Connect
-    implementation("org.apache.kafka:kafka-clients:3.8.0")
     compileOnly("org.apache.kafka:connect-transforms:3.8.0")
 
     // Logging
@@ -28,9 +29,7 @@ kotlin {
 }
 
 configurations {
-    configurations.testImplementation.get().apply {
-        extendsFrom(configurations.compileOnly.get())
-    }
+    testImplementation.extendsFrom(compileOnly)
 }
 
 tasks {
