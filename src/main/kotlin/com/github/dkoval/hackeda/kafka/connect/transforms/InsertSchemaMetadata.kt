@@ -25,6 +25,9 @@ abstract class InsertSchemaMetadata : Transformation<SinkRecord> {
         const val SCHEMA_FIELD_PROP = "schema.field"
         const val SCHEMA_FIELD_DEFAULT = "__schema__"
 
+        const val SCHEMA_MAX_CACHE_SIZE_PROP = "schema.maxCacheSize"
+        const val SCHEMA_MAX_CACHE_SIZE_DEFAULT = 16
+
         val SCHEMA_METADATA_SCHEMA: Schema = SchemaBuilder.struct()
             .field("name", Schema.STRING_SCHEMA)
             .field("version", Schema.OPTIONAL_INT32_SCHEMA)
@@ -38,6 +41,13 @@ abstract class InsertSchemaMetadata : Transformation<SinkRecord> {
                 ConfigDef.Importance.MEDIUM,
                 "Field name for schema metadata."
             )
+            .define(
+                SCHEMA_MAX_CACHE_SIZE_PROP,
+                ConfigDef.Type.INT,
+                SCHEMA_MAX_CACHE_SIZE_DEFAULT,
+                ConfigDef.Importance.LOW,
+                "Max cache size for schema metadata. Defaults to $SCHEMA_MAX_CACHE_SIZE_DEFAULT."
+            )
     }
 
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -47,7 +57,7 @@ abstract class InsertSchemaMetadata : Transformation<SinkRecord> {
     override fun configure(props: Map<String, *>) {
         val config = SimpleConfig(CONFIG_DEF, props)
         schemaField = config.getString(SCHEMA_FIELD_PROP)
-        schemaUpdateCache = SynchronizedCache(LRUCache(16))
+        schemaUpdateCache = SynchronizedCache(LRUCache(config.getInt(SCHEMA_MAX_CACHE_SIZE_PROP)))
     }
 
     override fun apply(record: SinkRecord): SinkRecord =
