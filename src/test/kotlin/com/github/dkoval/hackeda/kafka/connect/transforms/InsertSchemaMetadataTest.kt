@@ -206,5 +206,5 @@ private fun assertTransformedField(
     fieldExtractor: Struct.(fieldName: String) -> Any
 ) {
     assertEquals(originalSchema.field(fieldName).schema(), transformedSchema.field(fieldName).schema())
-    assertEquals(fieldExtractor(originalValue, fieldName), fieldExtractor(transformedValue, fieldName))
+    assertEquals(originalValue.fieldExtractor(fieldName), transformedValue.fieldExtractor(fieldName))
 }
