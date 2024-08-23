@@ -2,13 +2,15 @@ package com.github.dkoval.hackeda.kafka.connect.transforms
 
 import com.github.dkoval.hackeda.kafka.connect.transforms.InsertSchemaMetadata.Companion.SCHEMA_FIELD_DEFAULT
 import com.github.dkoval.hackeda.kafka.connect.transforms.InsertSchemaMetadata.Companion.SCHEMA_FIELD_PROP
-import com.github.dkoval.hackeda.kafka.connect.transforms.InsertSchemaMetadata.Companion.SCHEMA_INFO_SCHEMA
+import com.github.dkoval.hackeda.kafka.connect.transforms.InsertSchemaMetadata.Companion.SCHEMA_METADATA_SCHEMA
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.sink.SinkRecord
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -56,7 +58,7 @@ internal class InsertSchemaMetadataTest {
 
         // original value
         val originalValue = Struct(originalSchema)
-            .put("id", "8c4e627d-61ef-4a21-8631-331a0d5b1422")
+            .put("id", "ID1")
             .put("name", "John Doe")
 
         // apply SMT
@@ -95,13 +97,51 @@ internal class InsertSchemaMetadataTest {
         )
 
         // assert that the transformed record contains additional schema metadata
-        assertEquals(SCHEMA_INFO_SCHEMA, transformedSchema.field(schemaField).schema())
+        assertEquals(SCHEMA_METADATA_SCHEMA, transformedSchema.field(schemaField).schema())
         assertEquals(
-            Struct(SCHEMA_INFO_SCHEMA)
+            Struct(SCHEMA_METADATA_SCHEMA)
                 .put("name", originalSchema.name())
                 .put("version", originalSchema.version()),
             transformedValue.getStruct(schemaField)
         )
+    }
+
+    @Test
+    fun `should cache original schema`() {
+        transform.configure(emptyMap<String, Any>())
+
+        // original schema
+        val originalSchema = SchemaBuilder.struct()
+            .name("user.UserAssigned")
+            .version(1)
+            .doc("README")
+            .field("id", Schema.STRING_SCHEMA)
+            .field("name", Schema.STRING_SCHEMA)
+            .field("address", Schema.OPTIONAL_STRING_SCHEMA)
+            .build()
+
+        // apply SMT
+        val transformedRecord1 = transform.apply(
+            SinkRecord(
+                "test-topic", 0, null, "key1", originalSchema,
+                Struct(originalSchema)
+                    .put("id", "ID1")
+                    .put("name", "John Doe"),
+                0
+            )
+        )
+
+        val transformedRecord2 = transform.apply(
+            SinkRecord(
+                "test-topic", 0, null, "key2", originalSchema,
+                Struct(originalSchema)
+                    .put("id", "ID2")
+                    .put("name", "Jane Doe"),
+                1
+            )
+        )
+
+        assertSame(transformedRecord1.valueSchema(), transformedRecord2.valueSchema())
     }
 }
 

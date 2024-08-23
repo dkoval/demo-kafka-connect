@@ -14,7 +14,7 @@ import org.apache.kafka.connect.transforms.util.SchemaUtil
 import org.apache.kafka.connect.transforms.util.SimpleConfig
 
 /**
- * Inserts schema information, including `name` and `version` fields, into a `ConnectRecord`.
+ * Inserts schema metadata, including `name` and `version` fields, into a `ConnectRecord`.
  *
  * The implementation is inspired by `org.apache.kafka.connect.transforms.InsertField` Kafka Connect SMT.
  */
@@ -24,34 +24,34 @@ abstract class InsertSchemaMetadata<R : ConnectRecord<R>> : Transformation<R> {
         const val SCHEMA_FIELD_PROP = "schema.field"
         const val SCHEMA_FIELD_DEFAULT = "__schema__"
 
-        val SCHEMA_INFO_SCHEMA: Schema = SchemaBuilder.struct()
+        val SCHEMA_METADATA_SCHEMA: Schema = SchemaBuilder.struct()
             .field("name", Schema.STRING_SCHEMA)
             .field("version", Schema.OPTIONAL_INT32_SCHEMA)
             .build()
 
-        val CONFIG_DEF: ConfigDef = ConfigDef()
+        private val CONFIG_DEF: ConfigDef = ConfigDef()
             .define(
                 SCHEMA_FIELD_PROP,
                 ConfigDef.Type.STRING,
                 SCHEMA_FIELD_DEFAULT,
                 ConfigDef.Importance.MEDIUM,
-                "Field name for schema information."
+                "Field name for schema metadata."
             )
     }
 
-    private var schemaInfoField: String? = null
+    private var schemaField: String? = null
     private var schemaUpdateCache: Cache<Schema, Schema>? = null
 
     override fun configure(props: Map<String, *>) {
         val config = SimpleConfig(CONFIG_DEF, props)
-        schemaInfoField = config.getString(SCHEMA_FIELD_PROP)
+        schemaField = config.getString(SCHEMA_FIELD_PROP)
         schemaUpdateCache = SynchronizedCache(LRUCache(16))
     }
 
     override fun apply(record: R): R =
-        if (shouldInsertSchemaInfo(record)) applyWithSchema(record) else record
+        if (shouldInsertSchemaMetadata(record)) applyWithSchema(record) else record
 
-    private fun shouldInsertSchemaInfo(record: R): Boolean {
+    private fun shouldInsertSchemaMetadata(record: R): Boolean {
         operatingValue(record) ?: return false
         operatingSchema(record)?.name() ?: return false
         return true
@@ -69,13 +69,13 @@ abstract class InsertSchemaMetadata<R : ConnectRecord<R>> : Transformation<R> {
                 acc.put(field.name(), originalValue.get(field))
             }
 
-        // include schema name and schema version fields
-        schemaInfoField?.also {
-            val schemaInfo = Struct(SCHEMA_INFO_SCHEMA)
+        // include schema name and version fields
+        schemaField?.also {
+            val schemaMetadata = Struct(SCHEMA_METADATA_SCHEMA)
                 .put("name", originalSchema.name())
                 .put("version", originalSchema.version())
 
-            updatedValue.put(it, schemaInfo)
+            updatedValue.put(it, schemaMetadata)
         }
 
         return newRecord(record, updatedSchema, updatedValue)
@@ -87,9 +87,9 @@ abstract class InsertSchemaMetadata<R : ConnectRecord<R>> : Transformation<R> {
                 acc.field(field.name(), field.schema())
             }
 
-        // append schema information to the original schema
-        schemaInfoField?.also {
-            builder.field(it, SCHEMA_INFO_SCHEMA)
+        // append schema metadata to the original schema
+        schemaField?.also {
+            builder.field(it, SCHEMA_METADATA_SCHEMA)
         }
 
         return builder.build()
@@ -98,7 +98,7 @@ abstract class InsertSchemaMetadata<R : ConnectRecord<R>> : Transformation<R> {
     override fun config(): ConfigDef = CONFIG_DEF
 
     override fun close() {
-        schemaInfoField = null
+        schemaField = null
         schemaUpdateCache = null
     }
 
