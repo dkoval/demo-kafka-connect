@@ -95,20 +95,6 @@ services:
     volumes:
       - ./connectors:/opt/connect-plugins
       - ./config/aws_credentials:/home/appuser/.aws/credentials
-    # How to install Kafka Connect connector plugins
-    # https://rmoff.net/2020/06/19/how-to-install-connector-plugins-in-kafka-connect/
-    command:
-      - bash
-      - -c
-      - |
-        #
-        echo "Installing connector plugins"
-        confluent-hub install --no-prompt confluentinc/kafka-connect-s3:10.5.14
-        #
-        echo "Launching Kafka Connect worker"
-        /etc/confluent/docker/run & 
-        #
-        sleep infinity
 
   ksqldb:
     image: confluentinc/cp-ksqldb-server:7.7.0
