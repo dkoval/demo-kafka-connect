@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.utils.extendsFrom
 
 plugins {
     kotlin("jvm") version "2.0.20"
+    distribution
 }
 
 group = "com.github.dkoval"
@@ -12,7 +13,8 @@ repositories {
 }
 
 dependencies {
-    // Kafka + Kafka Connect
+    // Supported Versions and Interoperability for Confluent Platform
+    // https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-ak-compatibility
     compileOnly("org.apache.kafka:connect-transforms:3.8.0")
 
     // Logging
@@ -26,6 +28,15 @@ dependencies {
 
 kotlin {
     jvmToolchain(17)
+}
+
+distributions {
+    main {
+        contents {
+            from(tasks.jar)
+            from(configurations.runtimeClasspath)
+        }
+    }
 }
 
 configurations {

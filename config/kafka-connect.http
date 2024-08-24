@@ -41,5 +41,8 @@ Accept: application/json
   "storage.class": "io.confluent.connect.s3.storage.S3Storage",
   "format.class": "io.confluent.connect.s3.format.json.JsonFormat",
   "schema.generator.class": "io.confluent.connect.storage.hive.schema.DefaultSchemaGenerator",
-  "partitioner.class": "io.confluent.connect.storage.partitioner.DefaultPartitioner"
+  "partitioner.class": "io.confluent.connect.storage.partitioner.DefaultPartitioner",
+  "transforms": "InsertSchemaMetadata",
+  "transforms.InsertSchemaMetadata.type": "com.github.dkoval.hackeda.kafka.connect.transforms.InsertSchemaMetadata$Value",
+  "transforms.InsertSchemaMetadata.schema.field": "__schema__"
 }
