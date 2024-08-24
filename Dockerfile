@@ -9,15 +9,10 @@ ARG CONFLUENT_KAFKA_CONNECT_S3_PLUGIN_VERSION
 # https://rmoff.net/2020/06/19/how-to-install-connector-plugins-in-kafka-connect/
 RUN confluent-hub install --no-prompt confluentinc/kafka-connect-s3:${CONFLUENT_KAFKA_CONNECT_S3_PLUGIN_VERSION}
 
-# Supported Versions and Interoperability for Confluent Platform
-# https://docs.confluent.io/platform/current/installation/versions-interoperability.html#java
-FROM eclipse-temurin:17-jdk AS builder
-
-# Package custom Kafka Connect SMTs
-ADD ./ transforms
-WORKDIR transforms
-RUN ./gradlew installDist
-
 FROM platform
 
-COPY --from=builder /transforms/demo-connect-transforms/build/install/demo-connect-transforms /opt/connect-transforms
+# Set the working directory inside Kafka Connect container
+WORKDIR /opt/connect-transforms
+
+# Copy SMTs with all dependent JAR files into Kafka Connect container
+COPY demo-connect-transforms/build/install .
