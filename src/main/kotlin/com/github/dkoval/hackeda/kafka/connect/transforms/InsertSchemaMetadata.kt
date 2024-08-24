@@ -66,16 +66,16 @@ abstract class InsertSchemaMetadata : Transformation<SinkRecord> {
     private fun shouldInsertSchemaMetadata(record: SinkRecord): Boolean {
         operatingValue(record) ?: return false
         val schema = operatingSchema(record) ?: return false
-        return (schema.name() != null).also { ok ->
-            if (!ok) {
-                logger.warn(
-                    "Record with key = {}, partition = {}, offset = {} has unnamed schema. Schema metadata won't be inserted.",
-                    record.key(),
-                    record.kafkaPartition(),
-                    record.kafkaOffset()
-                )
-            }
+        if (schema.name().isNullOrBlank()) {
+            logger.warn(
+                "Record with key = {}, partition = {}, offset = {} has unnamed schema. Schema metadata won't be inserted.",
+                record.key(),
+                record.kafkaPartition(),
+                record.kafkaOffset()
+            )
+            return false
         }
+        return true
     }
 
     private fun applyWithSchema(record: SinkRecord): SinkRecord {
