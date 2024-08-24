@@ -1,5 +1,7 @@
-rootProject.name = "demo-kafka-connect"
-
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
+
+rootProject.name = "demo-kafka-connect"
+include(":demo-connect-transforms")
+include(":demo-producer")

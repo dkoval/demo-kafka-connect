@@ -9,4 +9,4 @@ RUN ./gradlew installDist
 
 FROM confluentinc/cp-kafka-connect:7.7.0
 
-COPY --from=base /transforms/build/install/demo-kafka-connect /opt/connect-transforms
+COPY --from=base /transforms/demo-connect-transforms/build/install/demo-connect-transforms /opt/connect-transforms
