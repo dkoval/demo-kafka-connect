@@ -10,5 +10,4 @@ Key deliverables:
   see [config/schema-registry.http](config/schema-registry.http))
 - Custom Kafka
   Connect [InsertSchemaMetadata](demo-connect-transforms/src/main/kotlin/com/github/dkoval/hackeda/kafka/connect/transforms/InsertSchemaMetadata.kt)
-  SMT
-  responsible for inserting `value` schema metadata fields to the Kafka Connect `SinkRecord`
+  SMT responsible for adding `value` schema metadata fields to the Kafka Connect `SinkRecord`
