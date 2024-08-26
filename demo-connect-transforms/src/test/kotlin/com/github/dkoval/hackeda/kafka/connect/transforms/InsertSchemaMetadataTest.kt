@@ -100,7 +100,7 @@ internal class InsertSchemaMetadataTest {
         assertEquals(SCHEMA_METADATA_SCHEMA, transformedSchema.field(schemaField).schema())
         assertEquals(
             Struct(SCHEMA_METADATA_SCHEMA)
-                .put("name", originalSchema.name())
+                .put("subject", originalSchema.name())
                 .put("version", originalSchema.version()),
             transformedValue.getStruct(schemaField)
         )

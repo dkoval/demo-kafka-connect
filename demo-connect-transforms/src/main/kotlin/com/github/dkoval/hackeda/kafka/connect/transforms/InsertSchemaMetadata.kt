@@ -15,7 +15,7 @@ import org.apache.kafka.connect.transforms.util.SimpleConfig
 import org.slf4j.LoggerFactory
 
 /**
- * Inserts schema metadata, including `name` and `version` fields, into a `ConnectRecord`.
+ * Inserts schema metadata, including `subject` and `version` fields, into a `ConnectRecord`.
  *
  * The implementation is inspired by `org.apache.kafka.connect.transforms.InsertField` Kafka Connect SMT.
  */
@@ -29,7 +29,7 @@ abstract class InsertSchemaMetadata : Transformation<SinkRecord> {
         const val SCHEMA_MAX_CACHE_SIZE_DEFAULT = 16
 
         val SCHEMA_METADATA_SCHEMA: Schema = SchemaBuilder.struct()
-            .field("name", Schema.STRING_SCHEMA)
+            .field("subject", Schema.STRING_SCHEMA)
             .field("version", Schema.OPTIONAL_INT32_SCHEMA)
             .build()
 
@@ -90,10 +90,10 @@ abstract class InsertSchemaMetadata : Transformation<SinkRecord> {
                 acc.put(field.name(), originalValue.get(field))
             }
 
-        // include schema name and version fields
+        // include schema metadata fields
         schemaField?.also {
             val schemaMetadata = Struct(SCHEMA_METADATA_SCHEMA)
-                .put("name", originalSchema.name())
+                .put("subject", originalSchema.name())
                 .put("version", originalSchema.version())
 
             updatedValue.put(it, schemaMetadata)
