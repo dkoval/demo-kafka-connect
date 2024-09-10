@@ -35,6 +35,7 @@ Accept: application/json
   "value.converter.schema.registry.url": "http://schema-registry:8081",
   "tasks.max": "2",
   "topics": {{input_topic}},
+  "consumer.override.auto.offset.reset": "latest",
   "s3.region": {{s3_region}},
   "s3.bucket.name": {{s3_bucket_name}},
   "s3.compression.type": "gzip",
